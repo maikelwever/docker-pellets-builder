@@ -1,0 +1,8 @@
+## sudoers file.
+##
+## The user in the Docker container must be able to run commands without being
+## prompted for a password.
+
+root ALL=(ALL) ALL
+build ALL=(ALL) ALL
+%wheel ALL=(ALL) NOPASSWD: ALL
