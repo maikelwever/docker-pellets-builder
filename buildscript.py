@@ -131,13 +131,14 @@ def execute_command(commands, input=None):
 class ExecutionWrapper:
     log_basedir = "/build/build_logs"
 
-    def __init__(self, log_name, user='root'):
+    def __init__(self, log_name, user='root', allow_failure=True):
         if not os.path.exists(self.log_basedir):
             os.makedirs(self.log_basedir)
 
         if not log_name.endswith('.log'):
             log_name += '.log'
 
+        self.allow_failure = allow_failure
         self.log_name = os.path.join(self.log_basedir, log_name)
         self.user = user
 
@@ -168,6 +169,8 @@ class ExecutionWrapper:
         if stderr:
             self.log_file.write("-- Stderr returned:\n")
             self.log_file.write(stderr)
+        if not self.allow_failure and exitcode != 0:
+            raise Exception("Command failed, aborting...")
         return exitcode, stdout, stderr
 
 
@@ -206,19 +209,19 @@ def build_package(variables):
         os.rmdir('/build/package_output')
 
     logger.info("Cloning PKGBUILD repo")
-    with ExecutionWrapper("git_clone") as e:
+    with ExecutionWrapper("git_clone", allow_failure=False) as e:
         e.execute_command('cd /build/ && git clone {0} "/build/package_output"'.format(
             quote(variables['git_remote'])
         ))
 
     logger.info("Checking out correct git commit")
-    with ExecutionWrapper("git_checkout") as e:
+    with ExecutionWrapper("git_checkout", allow_failure=False) as e:
         e.execute_command('cd /build/package_output/ && git checkout {0}'.format(
             variables['git_commit']
         ))
 
     logger.info("Invoking makepkg")
-    with ExecutionWrapper("makepkg") as e:
+    with ExecutionWrapper("makepkg", allow_failure=False) as e:
         e.execute_command('cd /build/package_output/ && makepkg -sfc --noconfirm --needed --noprogress')
 
 
