@@ -232,7 +232,13 @@ def process_payload(payload):
     logger.debug(variables)
 
     prepare_environment(variables)
-    build_package(variables)
+    try:
+        build_package(variables)
+    except:
+        commands = "sudo chown -R builder:builder /build"
+        process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        raise
 
 
 def main(args):
