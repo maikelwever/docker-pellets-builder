@@ -104,7 +104,7 @@ PACKAGER="{{ packager }}"
 #GPGKEY=""
 COMPRESSGZ=(gzip -c -f -n)
 COMPRESSBZ2=(bzip2 -c -f)
-COMPRESSXZ=(xz -c -z -)
+COMPRESSXZ=(xz -c -z - --threads={{ cpus }})
 COMPRESSLRZ=(lrzip -q)
 COMPRESSLZO=(lzop -q)
 COMPRESSZ=(compress -c -f)
