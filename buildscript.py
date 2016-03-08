@@ -189,17 +189,15 @@ def prepare_environment(variables):
     with open('/tmp/makepkg.conf', 'w') as f:
         f.write(MAKEPKG_CONF_TEMPLATE.render(**variables))
 
-    logger.info("Copying over configfiles")
-    with ExecutionWrapper("copyfiles") as e:
+    with ExecutionWrapper("environment_setup") as e:
+        logger.info("Preparing environment")
         e.execute_command('sudo cp /tmp/pacman.conf /etc/pacman.conf')
         e.execute_command('sudo cp /tmp/makepkg.conf /etc/makepkg.conf')
 
-    logger.info("Updating system")
-    with ExecutionWrapper("pacman_upgrade") as e:
+        logger.info("Updating system")
         e.execute_command('sudo pacman -Syyu --noconfirm --noprogress')
 
-    logger.info("Installing dependencies")
-    with ExecutionWrapper("pacman_deps") as e:
+        logger.info("Installing dependencies")
         e.execute_command('sudo pacman -S --noconfirm --noprogress --needed ' +
                           ' '.join(variables['packages_to_install']))
 
@@ -208,21 +206,19 @@ def build_package(variables):
     if os.path.exists('/build/package_output'):
         os.rmdir('/build/package_output')
 
-    logger.info("Cloning PKGBUILD repo")
-    with ExecutionWrapper("git_clone", allow_failure=False) as e:
+    with ExecutionWrapper("makepkg", allow_failure=False) as e:
+        logger.info("Cloning PKGBUILD repo")
         e.execute_command('cd /build/ && git clone {0} "/build/package_output"'.format(
             quote(variables['git_remote'])
         ))
 
-    logger.info("Checking out correct git commit")
-    with ExecutionWrapper("git_checkout", allow_failure=False) as e:
+        logger.info("Checking out correct git commit")
         e.execute_command('cd /build/package_output/ && git checkout {0}'.format(
             variables['git_commit']
         ))
 
-    logger.info("Invoking makepkg")
-    with ExecutionWrapper("makepkg", allow_failure=False) as e:
-        e.execute_command('cd /build/package_output/ && makepkg -sfc --noconfirm --needed --noprogress')
+        logger.info("Invoking makepkg")
+        e.execute_command('cd /build/package_output/ && SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress')
 
 
 def process_payload(payload):
