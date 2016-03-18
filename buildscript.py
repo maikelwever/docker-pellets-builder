@@ -194,6 +194,8 @@ def prepare_environment(variables):
         logger.info("Preparing environment")
         e.execute_command('sudo cp /tmp/pacman.conf /etc/pacman.conf')
         e.execute_command('sudo cp /tmp/makepkg.conf /etc/makepkg.conf')
+        e.execute_command('sudo mkdir -p /build/package_output')
+        e.execute_command('sudo chown build:build /build/package_output')
 
         logger.info("Updating system")
         e.execute_command('sudo pacman -Syyu --noconfirm --noprogress')
@@ -215,9 +217,6 @@ def build_package(variables):
         e.execute_command('git checkout {0}'.format(
             variables['git_commit']
         ), cwd='/home/pellets/package_output/')
-
-        if not os.path.exists("/build/package_output/"):
-            os.makedirs("/build/package_output/")
 
         logger.info("Invoking makepkg")
         e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
