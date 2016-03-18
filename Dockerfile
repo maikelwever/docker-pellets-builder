@@ -19,8 +19,11 @@ RUN chmod 0400 /etc/sudoers
 
 # Set up build output dir
 RUN mkdir -p /home/pellets/
-RUN mkdir -p /build/
+RUN mkdir -p /build/package_output/
+RUN mkdir /build/build_logs/
 RUN chown -R build:build /build
+RUN chown -R build:build /build/package_output/
+RUN chown -R build:build /build/build_logs/
 RUN chown -R build:build /home/pellets
 
 # Copy over buildscript
