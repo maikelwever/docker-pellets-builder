@@ -134,7 +134,8 @@ class ExecutionWrapper:
 
     def __init__(self, log_name, user='root', allow_failure=True):
         if not os.path.exists(self.log_basedir):
-            os.makedirs(self.log_basedir)
+            execute_command('sudo mkdir -p {0}'.format(self.log_basedir))
+            execute_command('sudo chown build:build {0}'.format(self.log_basedir))
 
         if not log_name.endswith('.log'):
             log_name += '.log'
