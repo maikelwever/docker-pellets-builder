@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# encoding=utf8
 # Buildscript for Arch packages
 # Part of the Pellets buildsystem
 

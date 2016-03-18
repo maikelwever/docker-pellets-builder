@@ -27,4 +27,4 @@ RUN chown -R build:build /home/pellets
 ADD buildscript.py /opt/buildscript.py
 WORKDIR /home/pellets/
 USER build
-ENTRYPOINT /usr/bin/python3 /opt/buildscript.py
+ENTRYPOINT LC_ALL='en_US.utf8' /usr/bin/python3 /opt/buildscript.py
