@@ -120,9 +120,9 @@ Server = {{ mirror }}
 """)
 
 
-def execute_command(commands, input=None):
+def execute_command(commands, input=None, cwd=None):
     logger.debug("Executing command: %s", commands)
-    process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
     stdout, stderr = process.communicate()
     logger.debug("Process exited with code %d", process.returncode)
     return process.returncode, stdout.decode(), stderr.decode()
@@ -155,9 +155,9 @@ class ExecutionWrapper:
         self.log_file.flush()
         self.log_file.close()
 
-    def execute_command(self, commands, input=None):
+    def execute_command(self, commands, input=None, cwd=None):
         commands += ' | uniq'
-        exitcode, stdout, stderr = execute_command(commands, input=input)
+        exitcode, stdout, stderr = execute_command(commands, input=input, cwd=cwd)
         self.log_file.write("-- Executed command " +
                             "{0}, exited with status code {1}.\n".format(commands, exitcode))
         if input:
@@ -197,28 +197,30 @@ def prepare_environment(variables):
         logger.info("Updating system")
         e.execute_command('sudo pacman -Syyu --noconfirm --noprogress')
 
-        logger.info("Installing dependencies")
-        e.execute_command('sudo pacman -S --noconfirm --noprogress --needed ' +
-                          ' '.join(variables['packages_to_install']))
+        if variables['packages_to_install']:
+            logger.info("Installing dependencies")
+            e.execute_command('sudo pacman -S --noconfirm --noprogress --needed ' +
+                              ' '.join(variables['packages_to_install']))
 
 
 def build_package(variables):
-    if os.path.exists('/build/package_output'):
-        os.rmdir('/build/package_output')
-
     with ExecutionWrapper("makepkg", allow_failure=False) as e:
         logger.info("Cloning PKGBUILD repo")
-        e.execute_command('cd /build/ && git clone {0} "/build/package_output"'.format(
+        e.execute_command('git clone {0} "/home/pellets/package_output"'.format(
             quote(variables['git_remote'])
-        ))
+        ), cwd='/home/pellets/')
 
         logger.info("Checking out correct git commit")
-        e.execute_command('cd /build/package_output/ && git checkout {0}'.format(
+        e.execute_command('git checkout {0}'.format(
             variables['git_commit']
-        ))
+        ), cwd='/home/pellets/package_output/')
+
+        if not os.path.exists("/build/package_output/"):
+            os.makedirs("/build/package_output/")
 
         logger.info("Invoking makepkg")
-        e.execute_command('cd /build/package_output/ && SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress')
+        e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
+                          cwd='/home/pellets/package_output/')
 
 
 def process_payload(payload):
@@ -228,13 +230,7 @@ def process_payload(payload):
     logger.debug(variables)
 
     prepare_environment(variables)
-    try:
-        build_package(variables)
-    except:
-        commands = "sudo chown -R builder:builder /build"
-        process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        raise
+    build_package(variables)
 
 
 def main(args):

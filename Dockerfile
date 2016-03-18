@@ -11,20 +11,20 @@ RUN pacman -Sy --noconfirm && \
 RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git
 
 VOLUME /build
-WORKDIR /build
 
 # Set up user & sudo
 ADD sudoers /etc/sudoers
-RUN useradd -d /build -G wheel build && \
-    chmod 0400 /etc/sudoers
+RUN useradd -d /home/pellets/ -m -G wheel build
+RUN chmod 0400 /etc/sudoers
 
 # Set up build output dir
-RUN mkdir /build/package_output
-RUN mkdir /build/build_logs
+RUN mkdir -p /home/pellets/
+RUN mkdir -p /build/
 RUN chown -R build:build /build
+RUN chown -R build:build /home/pellets
 
 # Copy over buildscript
 ADD buildscript.py /opt/buildscript.py
+WORKDIR /home/pellets/
 USER build
-ENTRYPOINT sudo chown build: /build && \
-           /usr/bin/python3 /opt/buildscript.py
+ENTRYPOINT /usr/bin/python3 /opt/buildscript.py
