@@ -121,6 +121,10 @@ Server = {{ mirror }}
 """)
 
 
+class CommandFailure(Exception):
+    pass
+
+
 def execute_command(commands, input=None, cwd=None):
     logger.debug("Executing command: %s", commands)
     process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
@@ -172,13 +176,14 @@ class ExecutionWrapper:
             self.log_file.write("-- Stderr returned:\n")
             self.log_file.write(stderr)
         if not self.allow_failure and exitcode != 0:
-            raise Exception("Command failed, aborting...")
+            raise CommandFailure("Command failed, aborting...")
         return exitcode, stdout, stderr
 
 
 def prepare_environment(variables):
     logger.info("Initializing gpg")
     with ExecutionWrapper("gpg_setup") as e:
+        e.execute_command('sudo haveged -w 1024')
         e.execute_command('dirmngr < /dev/null')
         for key in variables['keys_to_import']:
             logger.info("Importing gpg key %s", key)
@@ -208,20 +213,26 @@ def prepare_environment(variables):
 
 
 def build_package(variables):
-    with ExecutionWrapper("makepkg", allow_failure=False) as e:
-        logger.info("Cloning PKGBUILD repo")
-        e.execute_command('git clone {0} "/home/pellets/package_output"'.format(
-            quote(variables['git_remote'])
-        ), cwd='/home/pellets/')
+    try:
+        with ExecutionWrapper("makepkg", allow_failure=False) as e:
+            logger.info("Cloning PKGBUILD repo")
+            e.execute_command('git clone {0} "/home/pellets/package_output"'.format(
+                quote(variables['git_remote'])
+            ), cwd='/home/pellets/')
 
-        logger.info("Checking out correct git commit")
-        e.execute_command('git checkout {0}'.format(
-            variables['git_commit']
-        ), cwd='/home/pellets/package_output/')
+            logger.info("Checking out correct git commit")
+            e.execute_command('git checkout {0}'.format(
+                variables['git_commit']
+            ), cwd='/home/pellets/package_output/')
 
-        logger.info("Invoking makepkg")
-        e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
-                          cwd='/home/pellets/package_output/')
+            logger.info("Invoking makepkg")
+            e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
+                              cwd='/home/pellets/package_output/')
+
+            execute_command('sudo pkill haveged')
+    except CommandFailure:
+        execute_command('sudo pkill haveged')
+        raise
 
 
 def process_payload(payload):

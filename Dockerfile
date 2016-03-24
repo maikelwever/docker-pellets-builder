@@ -8,7 +8,7 @@ ADD mirrorlist /etc/pacman.d/mirrorlist
 RUN pacman -Sy --noconfirm && \
     pacman -S archlinux-keyring --noconfirm
 
-RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git
+RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git haveged procps-ng
 
 VOLUME /build
 
