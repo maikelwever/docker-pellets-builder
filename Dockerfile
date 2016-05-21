@@ -1,4 +1,4 @@
-FROM maikelwever/archlinux
+FROM maikelwever/docker-archlinux
 MAINTAINER Maikel Wever <maikelwever@gmail.com>
 
 # Adding mirrorlist with Dutch servers for when I build locally
