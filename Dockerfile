@@ -1,12 +1,9 @@
-FROM logankoester/archlinux
+FROM maikelwever/archlinux
 MAINTAINER Maikel Wever <maikelwever@gmail.com>
 
 # Adding mirrorlist with Dutch servers for when I build locally
 # Doesn't matter much on Docker Hub
 ADD mirrorlist /etc/pacman.d/mirrorlist
-
-RUN pacman -Sy --noconfirm && \
-    pacman -S archlinux-keyring --noconfirm
 
 RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git haveged procps-ng
 RUN bash -c "echo 'y\ny\n' | pacman -Scc"

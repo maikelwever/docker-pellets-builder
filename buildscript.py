@@ -208,7 +208,7 @@ def prepare_environment(variables):
 
         if variables['packages_to_install']:
             logger.info("Installing dependencies")
-            e.execute_command('sudo pacman -S --noconfirm --noprogress --needed ' +
+            e.execute_command('yes | sudo pacman -S --noprogress --needed ' +
                               ' '.join(variables['packages_to_install']))
 
 
