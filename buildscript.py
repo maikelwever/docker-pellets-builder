@@ -9,7 +9,6 @@ from shlex import quote
 import json
 import logging
 import os
-import select
 import subprocess
 import sys
 
@@ -17,7 +16,7 @@ logger = logging.getLogger('pellets-builder')
 logger.setLevel(logging.DEBUG)
 
 stream_handler = logging.StreamHandler()
-stream_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
 stream_handler.setFormatter(stream_formatter)
 logger.addHandler(stream_handler)
@@ -162,28 +161,36 @@ class ExecutionWrapper:
         self.log_file.close()
 
     def execute_command(self, commands, input=None, cwd=None):
-        commands += ' | uniq'
-        exitcode, stdout, stderr = execute_command(commands, input=input, cwd=cwd)
-        self.log_file.write("-- Executed command " +
-                            "{0}, exited with status code {1}.\n".format(commands, exitcode))
+        commands += ' 2>&1 | uniq'
+        logger.debug("***********************************************-")
+        logger.debug("*")
+        logger.debug("*  Executing command: %s", commands)
+        logger.debug("*")
+        logger.debug("***********************************************-")
+        process = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE,
+                                   universal_newlines=True, stdin=subprocess.PIPE, cwd=cwd)
         if input:
-            self.log_file.write("-- Input given:\n")
-            self.log_file.write(input)
-        if stdout:
-            self.log_file.write("-- Stdout returned:\n")
-            self.log_file.write(stdout)
-        if stderr:
-            self.log_file.write("-- Stderr returned:\n")
-            self.log_file.write(stderr)
+            process.stdin.write(input)
+
+        last_line = ""
+        for line in process.stdout:
+            if type(line) == bytes:
+                line = bytes.decode('utf-8')
+
+            if last_line != line:
+                logger.info('%s', line.strip('\r').strip('\n'))
+                last_line = line
+
+        process.communicate()
+        exitcode = process.returncode
+        logger.debug("Process exited with code %d", exitcode)
         if not self.allow_failure and exitcode != 0:
             raise CommandFailure("Command failed, aborting...")
-        return exitcode, stdout, stderr
 
 
 def prepare_environment(variables):
     logger.info("Initializing gpg")
     with ExecutionWrapper("gpg_setup") as e:
-        e.execute_command('sudo haveged -w 1024')
         e.execute_command('dirmngr < /dev/null')
         for key in variables['keys_to_import']:
             logger.info("Importing gpg key %s", key)
@@ -213,26 +220,20 @@ def prepare_environment(variables):
 
 
 def build_package(variables):
-    try:
-        with ExecutionWrapper("makepkg", allow_failure=False) as e:
-            logger.info("Cloning PKGBUILD repo")
-            e.execute_command('git clone {0} "/home/pellets/package_output"'.format(
-                quote(variables['git_remote'])
-            ), cwd='/home/pellets/')
+    with ExecutionWrapper("makepkg", allow_failure=False) as e:
+        logger.info("Cloning PKGBUILD repo")
+        e.execute_command('git clone {0} "/home/pellets/package_output"'.format(
+            quote(variables['git_remote'])
+        ), cwd='/home/pellets/')
 
-            logger.info("Checking out correct git commit")
-            e.execute_command('git checkout {0}'.format(
-                variables['git_commit']
-            ), cwd='/home/pellets/package_output/')
+        logger.info("Checking out correct git commit")
+        e.execute_command('git checkout {0}'.format(
+            variables['git_commit']
+        ), cwd='/home/pellets/package_output/')
 
-            logger.info("Invoking makepkg")
-            e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
-                              cwd='/home/pellets/package_output/')
-
-            execute_command('sudo pkill haveged')
-    except CommandFailure:
-        execute_command('sudo pkill haveged')
-        raise
+        logger.info("Invoking makepkg")
+        e.execute_command('SHELL=/bin/bash makepkg -sfc --noconfirm --needed --noprogress',
+                          cwd='/home/pellets/package_output/')
 
 
 def process_payload(payload):
@@ -247,10 +248,9 @@ def process_payload(payload):
 
 def main(args):
     logger.info("Pellets-builder starting...")
-    while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        decoded_payload = json.load(sys.stdin)
+    if len(args) > 0:
+        decoded_payload = json.loads(args[0])
         process_payload(decoded_payload)
-        break
     else:
         logger.warning("No JSON payload on stdin found.")
 

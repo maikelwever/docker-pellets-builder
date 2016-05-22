@@ -5,7 +5,7 @@ MAINTAINER Maikel Wever <maikelwever@gmail.com>
 # Doesn't matter much on Docker Hub
 ADD mirrorlist /etc/pacman.d/mirrorlist
 
-RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git haveged procps-ng
+RUN pacman -Syyu --needed --noconfirm base-devel sudo python-jinja git procps-ng
 RUN bash -c "echo 'y\ny\n' | pacman -Scc"
 
 VOLUME /build
@@ -25,4 +25,5 @@ RUN chown -R build:build /home/pellets
 ADD buildscript.py /opt/buildscript.py
 WORKDIR /home/pellets/
 USER build
-ENTRYPOINT LC_ALL='en_US.utf8' /usr/bin/python3 /opt/buildscript.py
+ENV LC_ALL en_US.utf8
+ENTRYPOINT ["/usr/bin/python3", "/opt/buildscript.py"]
