@@ -209,6 +209,8 @@ def prepare_environment(variables):
         e.execute_command('sudo cp /tmp/makepkg.conf /etc/makepkg.conf')
         e.execute_command('sudo mkdir -p /build/package_output')
         e.execute_command('sudo chown build:build /build/package_output')
+        e.execute_command('git config --global user.email "you@example.com"')
+        e.execute_command('git config --global user.name "Your Name"')
 
         logger.info("Updating system")
         e.execute_command('sudo pacman -Syyu --noconfirm --noprogress')
