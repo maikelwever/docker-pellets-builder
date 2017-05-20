@@ -24,5 +24,5 @@ RUN useradd -d /home/pellets/ -m -G wheel build && \
 ADD buildscript.py /opt/buildscript.py
 WORKDIR /home/pellets/
 USER build
-ENV LC_ALL en_US.utf8
+ENV LANG en_US.utf8
 ENTRYPOINT ["/usr/bin/python3", "/opt/buildscript.py"]
